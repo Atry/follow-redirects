@@ -29,8 +29,7 @@ for (var protocol in protocols) {
       var redirect = _.extend({
         count: 0,
         max: max,
-        clientRequest: null,
-        userCallback: callback
+        clientRequest: null
       }, redirectOptions);
 
       /**
@@ -59,6 +58,9 @@ for (var protocol in protocols) {
        * Build client request
        */
       var clientRequest = h.__proto__.request(options, redirectCallback(reqUrl, redirect));
+      if (callback) {
+        clientRequest.on('response', callback)
+      }
 
       // Save user's clientRequest so we can emit errors later
       if (!redirect.clientRequest) redirect.clientRequest = clientRequest;
@@ -70,12 +72,12 @@ for (var protocol in protocols) {
         return function (res) {
           // status must be 300-399 for redirects
           if (res.statusCode < 300 || res.statusCode > 399) {
-            return redirect.userCallback(res);
+            return redirect.clientRequest.emit('response', res);
           }
 
           // no `Location:` header => nowhere to redirect
           if (!('location' in res.headers)) {
-            return redirect.userCallback(res);
+            return redirect.clientRequest.emit('response', res);
           }
 
           // we are going to follow the redirect, but in node 0.10 we must first attach a data listener
